@@ -1,5 +1,6 @@
 const express = require("express");
 
+const HttpError = require("../models/errors");
 const router = express.Router();
 
 const DUMMY = [
@@ -23,15 +24,25 @@ router.get("/:id", (req, res, next) => {
     return place.id === id;
   });
 
+  if (!foundPlace) {
+    throw new HttpError("Could Not Find A Place With That ID", 404);
+  }
+
   res.json({ message: "Found Place by ID Successful", place: foundPlace });
 });
 
 // Find place by creator ID
 router.get("/user/:id", (req, res, next) => {
   const { id } = req.params;
-  const foundUser = DUMMY.find((place) => {
+  const foundPlace = DUMMY.find((place) => {
     return place.creator === id;
   });
+
+  if (!foundPlace) {
+    return next(
+      new HttpError("Could Not Find A Place With That Creator ID", 404)
+    );
+  }
 
   res.json({ message: "Found User by ID Successful", place: foundUser });
 });
