@@ -11,4 +11,6 @@ router.get("/:id", placesController.getPlaceById);
 // Find place by Creator ID
 router.get('/users/:id', placesController.getPlaceByCreatorId)
 
+router.post('/', placesController.createPlace)
+
 module.exports = router;
