@@ -1,5 +1,9 @@
 const { v4: uuid } = require("uuid");
+const { validationResult } = require('express-validator')
 const HttpError = require("../models/errors");
+
+
+
 let DUMMY = [
   {
     id: "p1",
@@ -27,22 +31,29 @@ const getPlaceById = (req, res, next) => {
   res.json({ message: "Found Place by ID Successful", place: foundPlace });
 };
 
-const getPlaceByCreatorId = (req, res, next) => {
+const getPlacesByCreatorId = (req, res, next) => {
   const { id } = req.params;
-  const foundPlace = DUMMY.find((place) => {
+  const foundPlaces = DUMMY.filter((place) => {
     return place.creator === id;
   });
 
-  if (!foundPlace) {
+  if (!foundPlaces || foundPlaces.length === 0) {
     return next(
-      new HttpError("Could Not Find A Place With That Creator ID", 404)
+      new HttpError("Could Not Find Places With That Creator ID", 404)
     );
   }
 
-  res.json({ message: "Found Place by Creator ID Successful", place: foundPlace });
+  res.json({ message: "Found Places by Creator ID Successful", places: foundPlaces });
 };
 
 const createPlace = (req, res, next) => {
+    const errors = validationResult(req)
+
+    if(!errors.isEmpty()) {
+    
+      throw new HttpError('Invalid Inputs Passed', 422)
+    }
+
     const { title, description, coordinates, address, creator } = req.body
     const createdPlace = {
         id: uuid(),
@@ -82,7 +93,7 @@ const deletePlace = (req, res, next) => {
 }
 
 module.exports = {
-  getPlaceByCreatorId: getPlaceByCreatorId,
+  getPlacesByCreatorId: getPlacesByCreatorId,
   getPlaceById: getPlaceById,
   createPlace: createPlace,
   updatePlace: updatePlace,

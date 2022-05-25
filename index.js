@@ -4,6 +4,7 @@ const bodyParser = require('body-parser')
 
 const HttpError = require('./models/errors')
 const placesRoutes = require('./routes/places')
+const usersRoutes = require('./routes/users')
 
 
 const app = express()
@@ -11,6 +12,7 @@ const app = express()
 app.use(bodyParser.json())
 
 app.use('/api/places', placesRoutes)
+app.use('/api/users', usersRoutes)
 
 // This middlware handles all incorrect routes
 app.use((req, res, next) => {
