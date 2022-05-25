@@ -1,6 +1,6 @@
 const { v4: uuid } = require("uuid");
 const HttpError = require("../models/errors");
-const DUMMY = [
+let DUMMY = [
   {
     id: "p1",
     title: "Empire State Building",
@@ -58,8 +58,33 @@ const createPlace = (req, res, next) => {
     res.status(201).json({message: 'Successfully Created A New Place ', place: createdPlace})
 };
 
+const updatePlace = (req, res, next) => {
+  const { title, description } = req.body
+  const {id} = req.params
+
+  const updatedPlace = DUMMY.find( (place) => place.id === id )
+  const copy = {...updatedPlace}
+  const placeIndex = DUMMY.findIndex( (place) => place.id === id )
+  copy.title = title
+  copy.description = description
+
+  DUMMY[placeIndex] = copy
+
+  res.status(200).json({ message: 'Update Place Successful', place: copy })
+}
+
+
+const deletePlace = (req, res, next) => {
+  const {id} = req.params
+  DUMMY = DUMMY.filter((place) => place.id !== id)
+  res.status(200).json({message: 'Place Deleted Successfully'})
+
+}
+
 module.exports = {
   getPlaceByCreatorId: getPlaceByCreatorId,
   getPlaceById: getPlaceById,
   createPlace: createPlace,
+  updatePlace: updatePlace,
+  deletePlace: deletePlace
 };
