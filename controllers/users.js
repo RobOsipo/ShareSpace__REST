@@ -1,4 +1,5 @@
 const { v4: uuid } = require("uuid");
+const { validationResult } = require("express-validator");
 const HttpError = require("../models/errors");
 
 const DUMMY = [
@@ -7,50 +8,56 @@ const DUMMY = [
     name: "Rob Osipovitch",
     description: "Famous Sky Scraper",
     email: "test@test.com",
-    password: "test"
+    password: "test",
   },
 ];
 
-
 const getUsers = (req, res) => {
-    res.status(200).json({users: DUMMY})
-}
+  res.status(200).json({ users: DUMMY });
+};
 
 const register = (req, res) => {
-    const {name, email, password} = req.body
+  const errors = validationResult(req);
 
-    const hasUser = DUMMY.find(user => user.email === email)
+  if (!errors.isEmpty()) {
+    throw new HttpError("Invalid Inputs Passed", 422);
+  }
 
-    if (hasUser) {
-        throw new HttpError('That Email Already Exist, Maybe Try Logging In', 422)
-    }
+  const { name, email, password } = req.body;
 
-    const createdUser = {
-        id: uuid(),
-        name,
-        email,
-        password
-    }
+  const hasUser = DUMMY.find((user) => user.email === email);
 
-    DUMMY.push(createdUser)
+  if (hasUser) {
+    throw new HttpError("That Email Already Exist, Maybe Try Logging In", 422);
+  }
 
-    res.status(201).json({ message: 'User Registered Successfully', user: createdUser })
-}
+  const createdUser = {
+    id: uuid(),
+    name,
+    email,
+    password,
+  };
 
+  DUMMY.push(createdUser);
+
+  res
+    .status(201)
+    .json({ message: "User Registered Successfully", user: createdUser });
+};
 
 const login = (req, res) => {
-    const { email, password } = req.body
+  const { email, password } = req.body;
 
-    const identifiedUser = DUMMY.find(user => user.email === email)
-    if (!identifiedUser || identifiedUser.password !== password) {
-        throw new HttpError('Could Not Find A User With That E-Mail', 401)
-    }
+  const identifiedUser = DUMMY.find((user) => user.email === email);
+  if (!identifiedUser || identifiedUser.password !== password) {
+    throw new HttpError("Could Not Find A User With That E-Mail", 401);
+  }
 
-    res.status(200).json({message: 'User Logged In Successfully'})
-}
+  res.status(200).json({ message: "User Logged In Successfully" });
+};
 
 module.exports = {
-    login: login,
-    register: register,
-    getUsers: getUsers
-}
+  login: login,
+  register: register,
+  getUsers: getUsers,
+};

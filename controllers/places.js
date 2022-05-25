@@ -1,8 +1,6 @@
 const { v4: uuid } = require("uuid");
-const { validationResult } = require('express-validator')
+const { validationResult } = require("express-validator");
 const HttpError = require("../models/errors");
-
-
 
 let DUMMY = [
   {
@@ -43,59 +41,75 @@ const getPlacesByCreatorId = (req, res, next) => {
     );
   }
 
-  res.json({ message: "Found Places by Creator ID Successful", places: foundPlaces });
+  res.json({
+    message: "Found Places by Creator ID Successful",
+    places: foundPlaces,
+  });
 };
 
 const createPlace = (req, res, next) => {
-    const errors = validationResult(req)
+  const errors = validationResult(req);
 
-    if(!errors.isEmpty()) {
-    
-      throw new HttpError('Invalid Inputs Passed', 422)
-    }
+  if (!errors.isEmpty()) {
+    throw new HttpError("Invalid Inputs Passed", 422);
+  }
 
-    const { title, description, coordinates, address, creator } = req.body
-    const createdPlace = {
-        id: uuid(),
-        title: title,
-        description: description,
-        location: coordinates,
-        address: address,
-        creator: creator
-    }
+  const { title, description, coordinates, address, creator } = req.body;
+  const createdPlace = {
+    id: uuid(),
+    title: title,
+    description: description,
+    location: coordinates,
+    address: address,
+    creator: creator,
+  };
 
-    DUMMY.push(createdPlace)
+  DUMMY.push(createdPlace);
 
-    res.status(201).json({message: 'Successfully Created A New Place ', place: createdPlace})
+  res
+    .status(201)
+    .json({
+      message: "Successfully Created A New Place ",
+      place: createdPlace,
+    });
 };
 
 const updatePlace = (req, res, next) => {
-  const { title, description } = req.body
-  const {id} = req.params
+  const errors = validationResult(req);
 
-  const updatedPlace = DUMMY.find( (place) => place.id === id )
-  const copy = {...updatedPlace}
-  const placeIndex = DUMMY.findIndex( (place) => place.id === id )
-  copy.title = title
-  copy.description = description
+  if (!errors.isEmpty()) {
+    throw new HttpError("Invalid Inputs Passed", 422);
+  }
 
-  DUMMY[placeIndex] = copy
+  const { title, description } = req.body;
+  const { id } = req.params;
 
-  res.status(200).json({ message: 'Update Place Successful', place: copy })
-}
+  const updatedPlace = DUMMY.find((place) => place.id === id);
+  const copy = { ...updatedPlace };
+  const placeIndex = DUMMY.findIndex((place) => place.id === id);
+  copy.title = title;
+  copy.description = description;
 
+  DUMMY[placeIndex] = copy;
+
+  res.status(200).json({ message: "Update Place Successful", place: copy });
+};
 
 const deletePlace = (req, res, next) => {
-  const {id} = req.params
-  DUMMY = DUMMY.filter((place) => place.id !== id)
-  res.status(200).json({message: 'Place Deleted Successfully'})
+  const { id } = req.params;
+  
+  if(!DUMMY.find(place => place.id === id)) {
+    throw new HttpError('Could not Find A Place With That ID', 404)
+  }
 
-}
+  DUMMY = DUMMY.filter((place) => place.id !== id);
+  res.status(200).json({ message: "Place Deleted Successfully" });
+};
 
 module.exports = {
   getPlacesByCreatorId: getPlacesByCreatorId,
   getPlaceById: getPlaceById,
   createPlace: createPlace,
   updatePlace: updatePlace,
-  deletePlace: deletePlace
+  deletePlace: deletePlace,
 };

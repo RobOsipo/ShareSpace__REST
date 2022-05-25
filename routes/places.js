@@ -11,10 +11,10 @@ router.get("/:id", placesController.getPlaceById);
 
 // Find place by Creator ID
 router.get('/users/:id', placesController.getPlacesByCreatorId)
-                                // Validation middlware array
-router.post('/', [check('title').not().isEmpty(), check('description').isLength({min: 1}), check('address').not().isEmpty()], placesController.createPlace)
 
-router.patch('/:id', placesController.updatePlace)
+router.post('/', [check('title').not().isEmpty(), check('description').not().isEmpty(), check('address').not().isEmpty()], placesController.createPlace)
+
+router.patch('/:id',[check('title').not().isEmpty(), check('description').not().isEmpty()], placesController.updatePlace)
 
 router.delete('/:id', placesController.deletePlace)
 
