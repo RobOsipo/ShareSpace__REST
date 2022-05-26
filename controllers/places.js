@@ -1,7 +1,9 @@
 const { v4: uuid } = require("uuid");
 const { validationResult } = require("express-validator");
 const HttpError = require("../models/errors");
-const getCoordsForAddress = require('../util/location')
+const getCoordsForAddress = require("../util/location");
+
+const PlaceModel = require("../models/place");
 
 let DUMMY = [
   {
@@ -17,24 +19,38 @@ let DUMMY = [
   },
 ];
 
-const getPlaceById = (req, res, next) => {
+const getPlaceById = async (req, res, next) => {
   const { id } = req.params;
-  const foundPlace = DUMMY.find((place) => {
-    return place.id === id;
-  });
 
-  if (!foundPlace) {
-    throw new HttpError("Could Not Find A Place With That ID", 404);
+  let foundPlace;
+  try {
+    foundPlace = await PlaceModel.findById(id);
+  } catch (err) {
+    const error = new HttpError("Something went wrong", 500);
+    return next(error);
   }
 
-  res.json({ message: "Found Place by ID Successful", place: foundPlace });
+  if (!foundPlace) {
+    const error = new HttpError("Could Not Find A Place With That ID", 404);
+    next(error);
+  }
+
+  res.json({
+    message: "Found Place by ID Successful",
+    place: foundPlace.toObject({ getters: true })
+  });
 };
 
-const getPlacesByCreatorId = (req, res, next) => {
+const getPlacesByCreatorId = async (req, res, next) => {
   const { id } = req.params;
-  const foundPlaces = DUMMY.filter((place) => {
-    return place.creator === id;
-  });
+
+  let foundPlaces;
+  try {
+    foundPlaces = await PlaceModel.find({ creator: id });
+  } catch (err) {
+    const error = new HttpError("Fetching Places Failed, Try Again Later", 500);
+    return next(error);
+  }
 
   if (!foundPlaces || foundPlaces.length === 0) {
     return next(
@@ -42,9 +58,9 @@ const getPlacesByCreatorId = (req, res, next) => {
     );
   }
 
-  res.json({
+  res.json({                    // ! when using toObject({ getters: true}) it takes the _ away from _id
     message: "Found Places by Creator ID Successful",
-    places: foundPlaces,
+    places: foundPlaces.map(place => place.toObject({ getters: true }))
   });
 };
 
@@ -52,45 +68,47 @@ const createPlace = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-   return next(new HttpError("Invalid Inputs Passed", 422));
+    return next(new HttpError("Invalid Inputs Passed", 422));
   }
 
   const { title, description, address, creator } = req.body;
 
-  let coordinates
+  let coordinates;
   try {
-    coordinates = await getCoordsForAddress(address)
-
+    coordinates = await getCoordsForAddress(address);
   } catch (error) {
-    console.log('The Geolocation API had an error')
-    return next(error)
+    console.log("The Geolocation API had an error");
+    return next(error);
   }
 
-
-  const createdPlace = {
-    id: uuid(),
-    title: title,
-    description: description,
+  const createdPlace = new PlaceModel({
+    title,
+    description,
+    address,
     location: coordinates,
-    address: address,
-    creator: creator,
-  };
+    imageUrl:
+      "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.cojkvno7WhjzCJTtEwuAtgHaE8%26pid%3DApi&f=1",
+    creator,
+  });
 
-  DUMMY.push(createdPlace);
+  try {
+    await createdPlace.save();
+  } catch (err) {
+    const error = new HttpError("Could Not Create Place", 500);
+    return next(error);
+  }
 
-  res
-    .status(201)
-    .json({
-      message: "Successfully Created A New Place ",
-      place: createdPlace,
-    });
+  res.status(201).json({
+    message: "Successfully Created A New Place ",
+    place: createdPlace,
+  });
 };
 
 const updatePlace = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    throw new HttpError("Invalid Inputs Passed", 422);
+    throw new HttpError("Invalid Inputs Used", 422);
   }
 
   const { title, description } = req.body;
@@ -109,9 +127,9 @@ const updatePlace = (req, res, next) => {
 
 const deletePlace = (req, res, next) => {
   const { id } = req.params;
-  
-  if(!DUMMY.find(place => place.id === id)) {
-    throw new HttpError('Could not Find A Place With That ID', 404)
+
+  if (!DUMMY.find((place) => place.id === id)) {
+    throw new HttpError("Could not Find A Place With That ID", 404);
   }
 
   DUMMY = DUMMY.filter((place) => place.id !== id);
