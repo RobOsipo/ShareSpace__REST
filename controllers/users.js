@@ -2,6 +2,8 @@ const { v4: uuid } = require("uuid");
 const { validationResult } = require("express-validator");
 const HttpError = require("../models/errors");
 
+const UserModel = require('../models/user')
+
 const DUMMY = [
   {
     id: "u1",
@@ -12,37 +14,51 @@ const DUMMY = [
   },
 ];
 
-const getUsers = (req, res) => {
+const getUsers = async (req, res) => {
   res.status(200).json({ users: DUMMY });
 };
 
-const register = (req, res) => {
+const register = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    throw new HttpError("Invalid Inputs Passed", 422);
+    return next(new HttpError("Invalid Inputs Passed", 422));
   }
 
-  const { name, email, password } = req.body;
+  const { name, email, password, places } = req.body;
 
-  const hasUser = DUMMY.find((user) => user.email === email);
-
-  if (hasUser) {
-    throw new HttpError("That Email Already Exist, Maybe Try Logging In", 422);
+  let existingUser
+  try {
+   existingUser = await UserModel.findOne({ email: email });
+  } catch(err) {
+      const error = new HttpError('Register User Failed, Try Again Later', 500)
+      return next(error)
   }
 
-  const createdUser = {
-    id: uuid(),
-    name,
-    email,
-    password,
-  };
+  if (existingUser) {
+    const error = new HttpError("That Email Already Exist, Maybe Try Logging In", 422);
+    return next(error)
+  }
 
-  DUMMY.push(createdUser);
+  const createdUser = new UserModel({
+      name: name,
+      email: email, 
+      password: password,
+      image: 'https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fwww.publicdomainpictures.net%2Fpictures%2F10000%2Fvelka%2F2612-1273513357htay.jpg&f=1&nofb=1',
+      places: places
+  })
+
+  
+  try {
+    await createdUser.save()
+  } catch (err) {
+    const error = new HttpError("Could Not Register User", 500);
+    return next(error);
+  }
 
   res
     .status(201)
-    .json({ message: "User Registered Successfully", user: createdUser });
+    .json({ message: "User Registered Successfully", user: createdUser.toObject({ getters: true }) });
 };
 
 const login = (req, res) => {
@@ -50,7 +66,7 @@ const login = (req, res) => {
 
   const identifiedUser = DUMMY.find((user) => user.email === email);
   if (!identifiedUser || identifiedUser.password !== password) {
-    throw new HttpError("Could Not Find A User With That E-Mail", 401);
+    return next(new HttpError("Could Not Find A User With That E-Mail", 401));
   }
 
   res.status(200).json({ message: "User Logged In Successfully" });

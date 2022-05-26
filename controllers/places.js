@@ -19,7 +19,7 @@ const getPlaceById = async (req, res, next) => {
 
   if (!foundPlace) {
     const error = new HttpError("Could Not Find A Place With That ID", 404);
-    next(error);
+    return next(error);
   }
 
   res.json({
@@ -96,7 +96,7 @@ const updatePlace = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    throw new HttpError("Invalid Inputs Used", 422);
+    return next(new HttpError("Invalid Inputs Used", 422));
   }
 
   const { title, description } = req.body;
