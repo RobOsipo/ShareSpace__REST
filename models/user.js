@@ -21,13 +21,14 @@ const userSchema = new Schema({
         type: String, 
         required: true
     },
-    places: { 
-        type: String, 
-        required: true
-    }
+    places: [{
+        type: mongoose.Types.ObjectId,
+        required: true,
+        ref: 'Place'
+    }]
 })
 
-// this package validates that the unique key to our email actually checks for a unique email value
+// this package validates that the "unique" key on our email schema actually checks for a unique email value
 userSchema.plugin(uniqueValidator)
 
 module.exports = mongoose.model('User', userSchema)

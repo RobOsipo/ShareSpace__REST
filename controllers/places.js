@@ -1,9 +1,11 @@
 const { v4: uuid } = require("uuid");
+const mongoose = require("mongoose");
 const { validationResult } = require("express-validator");
 const HttpError = require("../models/errors");
 const getCoordsForAddress = require("../util/location");
 
 const PlaceModel = require("../models/place");
+const UserModel = require("../models/user");
 
 
 const getPlaceById = async (req, res, next) => {
@@ -74,14 +76,34 @@ const createPlace = async (req, res, next) => {
     description,
     address,
     location: coordinates,
-    imageUrl:
+    image:
       "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.cojkvno7WhjzCJTtEwuAtgHaE8%26pid%3DApi&f=1",
-    creator,
+    creator
   });
 
+  let user
   try {
-    await createdPlace.save();
+    user = await UserModel.findById(creator)
   } catch (err) {
+    const error = new HttpError('Create Place Failed', 500)
+    return next(error)
+  }
+
+  if(!user) {
+    const error = new HttpError('Could Not Find User For Provided ID', 404)
+    return next(error)
+  }
+
+  try {
+    const sess = await mongoose.startSession()
+    sess.startTransaction()
+    await createdPlace.save({ session: sess })
+    user.places.push(createdPlace)
+    await user.save({ session: sess })
+    await sess.commitTransaction()
+
+  } catch (err) {
+    console.log(err)
     const error = new HttpError("Could Not Create Place", 500);
     return next(error);
   }
