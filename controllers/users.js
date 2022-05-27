@@ -15,7 +15,15 @@ const DUMMY = [
 ];
 
 const getUsers = async (req, res) => {
-  res.status(200).json({ users: DUMMY });
+    let users
+    try {
+        users = await UserModel.find({}, 'email name')
+    } catch(err) {
+        const error = new HttpError('Fetching Users Failed, Try Again Later', 500)
+        return next(error)
+    }
+
+    res.json({ users: users.map((user) => user.toObject({ getters: true }))})
 };
 
 const register = async (req, res, next) => {
@@ -61,13 +69,23 @@ const register = async (req, res, next) => {
     .json({ message: "User Registered Successfully", user: createdUser.toObject({ getters: true }) });
 };
 
-const login = (req, res) => {
+const login = async (req, res) => {
   const { email, password } = req.body;
 
-  const identifiedUser = DUMMY.find((user) => user.email === email);
-  if (!identifiedUser || identifiedUser.password !== password) {
-    return next(new HttpError("Could Not Find A User With That E-Mail", 401));
+  let existingUser
+  try {
+   existingUser = await UserModel.findOne({ email: email });
+  } catch(err) {
+      const error = new HttpError('Login User Failed, Try Again Later', 500)
+      return next(error)
   }
+
+  if(!existingUser || existingUser.password !== password) {
+      const error = new HttpError('Invalid Credentials', 401)
+      return next(error)
+  }
+
+
 
   res.status(200).json({ message: "User Logged In Successfully" });
 };
