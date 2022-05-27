@@ -47,7 +47,7 @@ const register = async (req, res, next) => {
     password: password,
     image:
       "https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fwww.publicdomainpictures.net%2Fpictures%2F10000%2Fvelka%2F2612-1273513357htay.jpg&f=1&nofb=1",
-    places: []
+    places: [],
   });
 
   try {
@@ -57,12 +57,10 @@ const register = async (req, res, next) => {
     return next(error);
   }
 
-  res
-    .status(201)
-    .json({
-      message: "User Registered Successfully",
-      user: createdUser.toObject({ getters: true }),
-    });
+  res.status(201).json({
+    message: "User Registered Successfully",
+    user: createdUser.toObject({ getters: true }),
+  });
 };
 
 const login = async (req, res) => {

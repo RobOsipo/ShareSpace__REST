@@ -6,7 +6,7 @@ const getCoordsForAddress = require("../util/location");
 
 const PlaceModel = require("../models/place");
 const UserModel = require("../models/user");
-
+const place = require("../models/place");
 
 const getPlaceById = async (req, res, next) => {
   const { id } = req.params;
@@ -35,13 +35,13 @@ const getPlacesByCreatorId = async (req, res, next) => {
 
   let foundPlaces;
   try {
-    foundPlaces = await PlaceModel.find({ creator: id });
+    foundPlaces = await UserModel.findById(id).populate("places");
   } catch (err) {
     const error = new HttpError("Fetching Places Failed, Try Again Later", 500);
     return next(error);
   }
 
-  if (!foundPlaces || foundPlaces.length === 0) {
+  if (!foundPlaces || foundPlaces.places.length === 0) {
     return next(
       new HttpError("Could Not Find Places With That Creator ID", 404)
     );
@@ -50,7 +50,9 @@ const getPlacesByCreatorId = async (req, res, next) => {
   res.json({
     // ! when using toObject({ getters: true}) it takes the _ away from _id
     message: "Found Places by Creator ID Successful",
-    places: foundPlaces.map((place) => place.toObject({ getters: true })),
+    places: foundPlaces.places.map((place) =>
+      place.toObject({ getters: true })
+    ),
   });
 };
 
@@ -78,32 +80,31 @@ const createPlace = async (req, res, next) => {
     location: coordinates,
     image:
       "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.cojkvno7WhjzCJTtEwuAtgHaE8%26pid%3DApi&f=1",
-    creator
+    creator,
   });
 
-  let user
+  let user;
   try {
-    user = await UserModel.findById(creator)
+    user = await UserModel.findById(creator);
   } catch (err) {
-    const error = new HttpError('Create Place Failed', 500)
-    return next(error)
+    const error = new HttpError("Create Place Failed", 500);
+    return next(error);
   }
 
-  if(!user) {
-    const error = new HttpError('Could Not Find User For Provided ID', 404)
-    return next(error)
+  if (!user) {
+    const error = new HttpError("Could Not Find User For Provided ID", 404);
+    return next(error);
   }
 
   try {
-    const sess = await mongoose.startSession()
-    sess.startTransaction()
-    await createdPlace.save({ session: sess })
-    user.places.push(createdPlace)
-    await user.save({ session: sess })
-    await sess.commitTransaction()
-
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await createdPlace.save({ session: sess });
+    user.places.push(createdPlace);
+    await user.save({ session: sess });
+    await sess.commitTransaction();
   } catch (err) {
-    console.log(err)
+    console.log(err);
     const error = new HttpError("Could Not Create Place", 500);
     return next(error);
   }
@@ -135,12 +136,10 @@ const updatePlace = async (req, res, next) => {
     return next(error);
   }
 
-  res
-    .status(200)
-    .json({
-      message: "Update Place Successful",
-      place: foundPlacetoUpdate.toObject({ getters: true }),
-    });
+  res.status(200).json({
+    message: "Update Place Successful",
+    place: foundPlacetoUpdate.toObject({ getters: true }),
+  });
 };
 
 const deletePlace = async (req, res, next) => {
@@ -148,9 +147,27 @@ const deletePlace = async (req, res, next) => {
 
   let foundPlaceToDelete;
   try {
-    foundPlaceToDelete = await PlaceModel.findByIdAndRemove(id);
+    foundPlaceToDelete = await PlaceModel.findById(id).populate("creator");
   } catch (err) {
     const error = new HttpError("Could Not Find The Place To Delete", 500);
+    return next(error);
+  }
+
+  if (!foundPlaceToDelete) {
+    const error = new HttpError("Could Not Find Place For This ID", 404);
+    return next(error);
+  }
+
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await foundPlaceToDelete.remove({ session: sess });
+    foundPlaceToDelete.creator.places.pull(foundPlaceToDelete);
+    await foundPlaceToDelete.creator.save({ session: sess });
+    await sess.commitTransaction();
+  } catch (err) {
+    console.log(err);
+    const error = new HttpError("Could Not Remove The Place", 500);
     return next(error);
   }
 
