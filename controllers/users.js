@@ -7,7 +7,7 @@ const UserModel = require("../models/user");
 const getUsers = async (req, res) => {
   let users;
   try {
-    users = await UserModel.find({}, "email name");
+    users = await UserModel.find({}, "email name image places");
   } catch (err) {
     const error = new HttpError("Fetching Users Failed, Try Again Later", 500);
     return next(error);
